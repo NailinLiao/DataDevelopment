@@ -134,8 +134,9 @@ def test():
 
 
 
-    short_focal_img = r'./test_data/norm_data/cm1.jpg'  # 5
-    long_focal_img = r'./test_data/norm_data/cm3.jpg'
+    short_focal_img = r'C:\Users\NailinLiao\Desktop\cases(1)\cases\case10\case10_camera1_1673425734566666640.jpg'  # 5
+    # long_focal_img = r'C:\Users\NailinLiao\Desktop\cases(1)\cases\case10\case10_camera3_1673425734566666640.jpg'
+    long_focal_img = r'C:\Users\NailinLiao\Desktop\cases(1)\cases\case10\case10_camera3_1673425734599999970.jpg'
 
     long_focal_img = cv2.imread(long_focal_img)
     short_focal_img = cv2.imread(short_focal_img)
