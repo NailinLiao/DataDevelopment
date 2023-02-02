@@ -1,7 +1,7 @@
 import os
-
 import cv2
 import numpy as np
+import time
 
 
 class Stitcher:
@@ -30,14 +30,20 @@ class Stitcher:
     def stitch(self, images, H):
         (long_focal_img, short_focal_img) = images
 
-        long_focal_img = self.crop_image(long_focal_img, 0.75)
+        long_focal_img = self.crop_image(long_focal_img, 0.75) - 100
         short_focal_img = self.crop_image(short_focal_img, -0.75)
 
         result = cv2.warpPerspective(short_focal_img, H,
                                      (short_focal_img.shape[1] + long_focal_img.shape[1], short_focal_img.shape[0]))
-        result[0:long_focal_img.shape[0], 0:long_focal_img.shape[1]] = long_focal_img
+        # result *= 0.5
 
-        return result
+        # result[0:long_focal_img.shape[0], 0:long_focal_img.shape[1]] += long_focal_img
+        result[0:long_focal_img.shape[0],
+        int(long_focal_img.shape[1] * 0.25):long_focal_img.shape[1]] += long_focal_img[0:long_focal_img.shape[0],
+                                                                        int(long_focal_img.shape[1] * 0.25):
+                                                                        long_focal_img.shape[1]]
+
+        return result[:, :-int(long_focal_img.shape[1] * 0.5)]
 
     def detectAndDescribe(self, image):
         descriptor = cv2.SIFT_create()
@@ -119,28 +125,147 @@ def transformation_by_norm(images):
     H_3_1, H_2_3 = get_norm_mtx()
 
     result = stitcher.stitch([long_focal_img, short_focal_img], H_3_1)
-
-    cv2.imshow('result', result)
-    cv2.waitKey(0)
-
-
-def test():
-    short_focal_img = r'./test_data/norm_data/cm1_.jpg'  # 5
-    cm2 = r'./test_data/norm_data/cm2_.jpg'
-    long_focal_img = r'./test_data/norm_data/cm3_.jpg'
-
-    # short_focal_img = r'.\test_data\test_data\cm1\1669342684066666690.jpg'
-    # long_focal_img = r'.\test_data\test_data\cm3\1669342684066666690.jpg'
+    return result
+    # cv2.imshow('result', result)
+    # cv2.waitKey(0)
 
 
+def time_dropout_matching_check(camera_path_list, save_path, second=1):
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+    range_time = second * 300000000
+    # 1669342684700000023
+    stitcher = Stitcher()
+    short_focal_img_norm = r'./test_data/norm_data/cm1.jpg'  # 5
+    long_focal_img_norm = r'./test_data/norm_data/cm3.jpg'
 
-    short_focal_img = r'C:\Users\NailinLiao\Desktop\cases(1)\cases\case10\case10_camera1_1673425734566666640.jpg'  # 5
-    # long_focal_img = r'C:\Users\NailinLiao\Desktop\cases(1)\cases\case10\case10_camera3_1673425734566666640.jpg'
-    long_focal_img = r'C:\Users\NailinLiao\Desktop\cases(1)\cases\case10\case10_camera3_1673425734599999970.jpg'
+    long_focal_img = cv2.imread(long_focal_img_norm)
+    short_focal_img = cv2.imread(short_focal_img_norm)
 
-    long_focal_img = cv2.imread(long_focal_img)
-    short_focal_img = cv2.imread(short_focal_img)
+    norm_H_3_1 = stitcher.get_M([long_focal_img, short_focal_img])
 
-    transformation_by_norm([long_focal_img, short_focal_img])
+    camera1_base_path, camera2_base_path, camera3_base_path = camera_path_list
+    camera1_file_list = os.listdir(camera1_base_path)
+    camera2_file_list = os.listdir(camera2_base_path)
+    camera3_file_list = os.listdir(camera3_base_path)
+    camera1_file_list.sort()
+    camera2_file_list.sort()
+    camera3_file_list.sort()
 
-test()
+    for index_1, cm1 in enumerate(camera1_file_list[3:]):
+        Similarity_list = []
+        img_list = []
+        Time_path = os.path.join(save_path, str(cm1).split('.')[0])
+        if not os.path.exists(Time_path):
+            os.makedirs(Time_path)
+        Time_cm1 = int(str(cm1).split('.')[0])
+
+        cm1_file_path = os.path.join(camera1_base_path, cm1)
+        short_focal_img = cv2.imread(cm1_file_path)
+
+        for index_3, cm3 in enumerate(camera3_file_list):
+            Time_cm3 = int(str(cm3).split('.')[0])
+            if Time_cm3 < Time_cm1 + range_time and Time_cm3 > Time_cm1 - range_time:
+                cm3_file_path = os.path.join(camera3_base_path, cm3)
+                long_focal_img = cv2.imread(cm3_file_path)
+                H_3_1 = stitcher.get_M([long_focal_img, short_focal_img])
+                img = transformation_by_norm([long_focal_img, short_focal_img])
+                Similarity = stitcher.mtx_similar(norm_H_3_1, H_3_1)
+
+                fram_the = int((int(Time_cm1) - int(Time_cm3)) / 33333333)
+
+                img_name = str(Time_cm1) + '_' + str(Time_cm3) + '_' + str(fram_the) + '_' + str(
+                    Similarity) + '.png'
+                print(img_name)
+                end_save_path = os.path.join(Time_path, img_name)
+
+                Similarity_list.append(Similarity)
+                img_list.append({
+                    'end_save_path': end_save_path,
+                    'img': img,
+                })
+
+                # cv2.imwrite(end_save_path, img)
+                # print(img_name)
+        max_index = Similarity_list.index(max(Similarity_list))
+        ret = img_list[max_index]
+        end_save_path = ret['end_save_path']
+
+        cv2.imwrite(end_save_path, ret['img'])
+
+
+def top1(lst): return max(lst, default='列表为空', key=lambda v: lst.count(v))
+
+
+def time_dropout_matching_check_fram(camera_path_list, save_path, second=1):
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+    range_time = second * 200000000
+    # 1669342684700000023
+    stitcher = Stitcher()
+    short_focal_img_norm = r'./test_data/norm_data/cm1.jpg'  # 5
+    long_focal_img_norm = r'./test_data/norm_data/cm3.jpg'
+
+    long_focal_img = cv2.imread(long_focal_img_norm)
+    short_focal_img = cv2.imread(short_focal_img_norm)
+
+    norm_H_3_1 = stitcher.get_M([long_focal_img, short_focal_img])
+
+    camera1_base_path, camera2_base_path, camera3_base_path = camera_path_list
+    camera1_file_list = os.listdir(camera1_base_path)
+    camera2_file_list = os.listdir(camera2_base_path)
+    camera3_file_list = os.listdir(camera3_base_path)
+    camera1_file_list.sort()
+    camera2_file_list.sort()
+    camera3_file_list.sort()
+    big_ret = []
+    step = 30*10
+    for index_1, cm1 in enumerate(camera1_file_list[90003:]):
+        if index_1 % step == 0:
+            Similarity_list = []
+            fram_the_list = []
+            Time_path = os.path.join(save_path, str(cm1).split('.')[0])
+            if not os.path.exists(Time_path):
+                os.makedirs(Time_path)
+            Time_cm1 = int(str(cm1).split('.')[0])
+
+            cm1_file_path = os.path.join(camera1_base_path, cm1)
+            short_focal_img = cv2.imread(cm1_file_path)
+
+            for index_3, cm3 in enumerate(camera3_file_list[90000:]):
+                Time_cm3 = int(str(cm3).split('.')[0])
+                if Time_cm3 < Time_cm1 + range_time and Time_cm3 > Time_cm1 - range_time:
+                    cm3_file_path = os.path.join(camera3_base_path, cm3)
+                    long_focal_img = cv2.imread(cm3_file_path)
+                    H_3_1 = stitcher.get_M([long_focal_img, short_focal_img])
+                    Similarity = stitcher.mtx_similar(norm_H_3_1, H_3_1)
+                    fram_the = int((int(Time_cm1) - int(Time_cm3)) / 33333330)
+                    img = transformation_by_norm([long_focal_img, short_focal_img])
+
+                    img_name = str(Time_cm1) + '_' + str(Time_cm3) + '_' + str(fram_the) + '_' + str(
+                        Similarity) + '.png'
+                    end_save_path = os.path.join(Time_path, img_name)
+
+                    Similarity_list.append(Similarity)
+                    fram_the_list.append(fram_the)
+
+                    cv2.imwrite(end_save_path, img)
+                    print(img_name)
+            max_index = Similarity_list.index(max(Similarity_list))
+            big_ret.append(fram_the_list[max_index])
+    r = top1(big_ret)
+    print(big_ret)
+    print(r)
+
+
+start = time.time()
+time_dropout_matching_check_fram([r'/media/nas48/shucai/20230111/20230111_153435_output/record/camera1',
+                                  r'/home/nailinliao/Desktop/DataDevelopment/SynchronousCheck/test_data/test_data/cm2',
+                                  r'/media/nas48/shucai/20230111/20230111_153435_output/record/camera3'],
+                                 r'/home/nailinliao/Desktop/20230111_step10second')
+
+# time_dropout_matching_check_fram([r'/home/nailinliao/Desktop/DataDevelopment/SynchronousCheck/test_data/test_data/cm1',
+#                                   r'/home/nailinliao/Desktop/DataDevelopment/SynchronousCheck/test_data/test_data/cm2',
+#                                   r'/home/nailinliao/Desktop/DataDevelopment/SynchronousCheck/test_data/test_data/cm3'],
+#                                  r'/home/nailinliao/Desktop/20230111')
+print('time:', time.time() - start)
