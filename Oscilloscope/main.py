@@ -53,10 +53,7 @@ def show(data_list, index, video_path, cap=0, step=50):
         show_video(cap, index)
 
 
-def main(ins_data, video_path=None, show_oscilloscope_len=100):
-    DataFrame = pd.read_csv(ins_data)
-    data_list = DataFrame['Front_Axle_Speed']
-
+def show_data_list(data_list, video_path=None, show_oscilloscope_len=100):
     data_len = len(data_list)
     step = int(show_oscilloscope_len / 2)
     cap = 0
@@ -86,6 +83,6 @@ def main(ins_data, video_path=None, show_oscilloscope_len=100):
 if __name__ == '__main__':
     video_path = r'/home/nailinliao/Desktop/camera1/1670812712066666690.mp4'
     ins_data = r'/home/nailinliao/Desktop/radar1/1670812712096032405_EBC2_EBS.csv'
-    # DataFrame = pd.read_csv(ins_data)
-    # data_list = DataFrame['Front_Axle_Speed']
-    main(ins_data, video_path)
+    DataFrame = pd.read_csv(ins_data)
+    data_list = DataFrame['Front_Axle_Speed']
+    show_data_list(data_list, video_path)
