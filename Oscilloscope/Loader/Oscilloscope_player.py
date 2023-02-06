@@ -84,14 +84,20 @@ class OscilloscopeLoader:
         self.buffer = buffer
         self.show_oscilloscope_time = show_oscilloscope_time
         self.time_list = time_list
+        self.time_list.reverse()
         self.step_time = int(self.show_oscilloscope_time / 2)
 
         self.read_video_Process = Process(target=self.make_oscilloscope, args=())
         self.read_video_Process.start()
 
     def make_oscilloscope(self):
-        for now_time in self.time_list:
-            new_ = time.time()
+        while len(self.time_list) != 0:
+            if self.q_message.qsize() != 0:
+                self.time_list = self.q_message.get()
+                self.time_list.reverse()
+                while self.q_out.qsize() > 0:
+                    _ = self.q_out.get()
+            now_time = self.time_list.pop()
             start_time = now_time - self.step_time
             end_time = now_time + self.step_time
             new_DataFrame = self.DataFrame[
@@ -99,19 +105,24 @@ class OscilloscopeLoader:
                         self.DataFrame['Mesg_TimeStamp'] < end_time)
                 ]
             if len(new_DataFrame) == 0:
-                pass
+                y = [0, 0, 0, 0, 0, 0, 0]
+                x = [0, 0, 0, 0, 0, 0, 0]
             else:
-                plt.scatter(y=new_DataFrame[self.property], x=new_DataFrame['Mesg_TimeStamp'])
-                buffer = BytesIO()
-                plt.savefig(buffer, format='png')
-                buffer.seek(0)
-                data_img = Image.open(buffer)
-                data_img = np.array(data_img)
-                plt.clf()
-                self.q_out.put(data_img)
-                # cv2.imshow('m', data_img)
-                # cv2.waitKey(1)
-                # return data_img
+                y = new_DataFrame[self.property]
+                x = new_DataFrame['Mesg_TimeStamp']
+            # plt.scatter(y=y, x=x)
+            plt.plot(x, y)
+            plt.title(self.property, loc='center')
+            buffer = BytesIO()
+            plt.savefig(buffer, format='png')
+            buffer.seek(0)
+            data_img = Image.open(buffer)
+            data_img = np.array(data_img)
+            plt.clf()
+            self.q_out.put(data_img)
+            # cv2.imshow('m', data_img)
+            # cv2.waitKey(1)
+            # return data_img
 
 
 def test():
