@@ -7,6 +7,7 @@ from scipy.fft import fft
 from io import BytesIO
 from PIL import Image
 import pandas as pd
+import time
 
 '''
 show video and Oscilloscope
@@ -14,7 +15,7 @@ show video and Oscilloscope
 
 
 def show_video(cap, index):
-    cap.set(cv2.CAP_PROP_POS_FRAMES, index)
+    # cap.set(cv2.CAP_PROP_POS_FRAMES, index)
     _, frame = cap.read()
     cv2.imshow('frame', frame)
 
@@ -59,24 +60,29 @@ def show_data_list(data_list, video_path=None, show_oscilloscope_len=100):
     cap = 0
     if video_path != None:
         cap = cv2.VideoCapture(video_path)
-
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        wait = int(1 / fps * 750)
     index = step
     run = True
     while index + step < data_len:
         if run:
             show(data_list, index, video_path, cap, step)
             index += 1
-
-        key = cv2.waitKey(1)
+        key = cv2.waitKey(wait)
         if key == 32:
             run = bool(1 - run)
         elif key == 27:
             break
         elif key == 81:
             index -= 1
+            cap.set(cv2.CAP_PROP_POS_FRAMES,
+                    index)  # 解码速度跟不上推流速度导致 [hevc @ 0x559ef895c480] Could not find ref with POC
+
             show(data_list, index, video_path, cap)
         elif key == 83:
             index += 1
+            cap.set(cv2.CAP_PROP_POS_FRAMES,
+                    index)  # 解码速度跟不上推流速度导致 [hevc @ 0x559ef895c480] Could not find ref with POC
             show(data_list, index, video_path, cap)
 
 
