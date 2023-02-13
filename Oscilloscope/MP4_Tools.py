@@ -62,9 +62,7 @@ def get_video_time(video_path, decode=5):
         time_float = float(time_sec) + float(time_nan) / 1000000000
         time_floats.append(time_float)
     return [time_secs, time_nans, time_floats]
-    # 1673422 834 833333347
-    # 1673422 476 166666680
-    # 0000000 358 766666666
+
 
 
 if __name__ == '__main__':

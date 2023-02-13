@@ -72,58 +72,145 @@ from Oscilloscope.MP4_Tools import get_video_time
 #                     _ = self.q_out.get()
 #             index += 1
 
-class OscilloscopeLoader:
-    def __init__(self, DataFrame: pd.DataFrame, property: str, time_list: list, q_out: Queue, q_message: Queue,
-                 buffer=200,
-                 show_oscilloscope_time=5):
-        self.DataFrame = DataFrame
+# class OscilloscopeLoader:
+#     def __init__(self, DataFrame: pd.DataFrame, property: str, time_list: list, q_out: Queue, q_message: Queue,
+#                  buffer=200,
+#                  show_oscilloscope_time=5):
+#         self.DataFrame = DataFrame
+#
+#         self.q_out = q_out
+#         self.q_message = q_message
+#         self.property = property
+#         self.buffer = buffer
+#         self.show_oscilloscope_time = show_oscilloscope_time
+#         self.time_list = time_list
+#         self.time_list.reverse()
+#         self.step_time = int(self.show_oscilloscope_time / 2)
+#
+#         self.read_video_Process = Process(target=self.make_oscilloscope, args=())
+#         self.read_video_Process.start()
+#
+#     def make_oscilloscope(self):
+#         while len(self.time_list) != 0:
+#             if self.q_message.qsize() != 0:
+#                 self.time_list = self.q_message.get()
+#                 self.time_list.reverse()
+#                 while self.q_out.qsize() > 0:
+#                     _ = self.q_out.get()
+#             now_time = self.time_list.pop()
+#             start_time = now_time - self.step_time
+#             end_time = now_time + self.step_time
+#             new_DataFrame = self.DataFrame[
+#                 (self.DataFrame['Mesg_TimeStamp'] > start_time) & (
+#                         self.DataFrame['Mesg_TimeStamp'] < end_time)
+#                 ]
+#             if len(new_DataFrame) == 0:
+#                 y = [0, 0, 0, 0, 0, 0, 0]
+#                 x = [0, 0, 0, 0, 0, 0, 0]
+#             else:
+#                 y = new_DataFrame[self.property]
+#                 x = new_DataFrame['Mesg_TimeStamp']
+#             # plt.scatter(y=y, x=x)
+#             plt.plot(x, y)
+#             plt.title(self.property, loc='center')
+#             buffer = BytesIO()
+#             plt.savefig(buffer, format='png')
+#             buffer.seek(0)
+#             data_img = Image.open(buffer)
+#             data_img = np.array(data_img)
+#             # plt.show()
+#             plt.clf()
+#             self.q_out.put(data_img)
+#             cv2.imshow('m', data_img)
+#             cv2.waitKey(1)
+#             # return data_img
 
-        self.q_out = q_out
+# class OscilloscopeLoader:
+#     def __init__(self, DataFrame: pd.DataFrame, property: str, q_message: Queue,
+#                  show_oscilloscope_time=10):
+#
+#         self.DataFrame = DataFrame
+#         self.q_message = q_message
+#         self.property = property
+#         self.show_oscilloscope_time = show_oscilloscope_time
+#         self.step_time = int(self.show_oscilloscope_time / 2)
+#
+#         self.read_video_Process = Process(target=self.make_oscilloscope, args=())
+#         self.read_video_Process.start()
+#
+#     def make_oscilloscope(self):
+#         plt.ion()  # interactive mode on
+#         plt.title(self.property, loc='center')
+#         ax = plt.gca()
+#         x = np.arange(0, 10, 0.1)
+#         line, = ax.plot(x, x)
+#         y = np.array(self.DataFrame[self.property])
+#         # x=np.array(self.DataFrame['Mesg_TimeStamp'])
+#         plt.ylim(-abs(min(y) * 1), max(y) * 1)  # 设置y轴刻度范围
+#         # plt.xlim(x[0], x[-1])  # 设置y轴刻度范围
+#         plt.draw()
+#         STAU = True
+#
+#         while STAU:
+#             if self.q_message.qsize() != 0:
+#                 now_time = self.q_message.get()
+#                 if now_time == 'q':
+#                     break
+#                 start_time = now_time - self.step_time
+#                 end_time = now_time + self.step_time
+#                 new_DataFrame = self.DataFrame[
+#                     (self.DataFrame['Mesg_TimeStamp'] > start_time) & (
+#                             self.DataFrame['Mesg_TimeStamp'] < end_time)
+#                     ]
+#                 y = np.array(new_DataFrame[self.property])
+#                 x = np.array(new_DataFrame['Mesg_TimeStamp'])
+#             else:
+#                 y = [0, 0, 0, 0, 0, 0]
+#                 x = [1, 2, 3, 4, 5, 6]
+#
+#             line.set_data([x, y])
+#             plt.xlim(x[0], x[-1])  # 设置y轴刻度范围
+#             plt.draw()
+#             plt.pause(0.0001)
+
+
+class OscilloscopeLoader:
+    def __init__(self, DataFrame: pd.DataFrame, property: str, q_message: Queue, acx,
+                 show_oscilloscope_time=10):
+        self.acx = acx
+        self.acx.set_title(property)
+
+        self.DataFrame = DataFrame
         self.q_message = q_message
         self.property = property
-        self.buffer = buffer
         self.show_oscilloscope_time = show_oscilloscope_time
-        self.time_list = time_list
-        self.time_list.reverse()
         self.step_time = int(self.show_oscilloscope_time / 2)
 
         self.read_video_Process = Process(target=self.make_oscilloscope, args=())
         self.read_video_Process.start()
 
     def make_oscilloscope(self):
-        while len(self.time_list) != 0:
-            if self.q_message.qsize() != 0:
-                self.time_list = self.q_message.get()
-                self.time_list.reverse()
-                while self.q_out.qsize() > 0:
-                    _ = self.q_out.get()
-            now_time = self.time_list.pop()
-            start_time = now_time - self.step_time
-            end_time = now_time + self.step_time
-            new_DataFrame = self.DataFrame[
-                (self.DataFrame['Mesg_TimeStamp'] > start_time) & (
-                        self.DataFrame['Mesg_TimeStamp'] < end_time)
-                ]
-            if len(new_DataFrame) == 0:
-                y = [0, 0, 0, 0, 0, 0, 0]
-                x = [0, 0, 0, 0, 0, 0, 0]
-            else:
-                y = new_DataFrame[self.property]
-                x = new_DataFrame['Mesg_TimeStamp']
-            # plt.scatter(y=y, x=x)
-            plt.plot(x, y)
-            plt.title(self.property, loc='center')
-            buffer = BytesIO()
-            plt.savefig(buffer, format='png')
-            buffer.seek(0)
-            data_img = Image.open(buffer)
-            data_img = np.array(data_img)
-            plt.clf()
-            self.q_out.put(data_img)
-            # cv2.imshow('m', data_img)
-            # cv2.waitKey(1)
-            # return data_img
+        line, = self.acx.plot([0, 1, 2, 3, 100], [0, 0, 0, 0, 100])
 
+        STAU = True
+        while True:
+            if self.q_message.qsize() != 0:
+                now_time = self.q_message.get()
+                if now_time == 'q':
+                    break
+                start_time = now_time - self.step_time
+                end_time = now_time + self.step_time
+                new_DataFrame = self.DataFrame[
+                    (self.DataFrame['Mesg_TimeStamp'] > start_time) & (
+                            self.DataFrame['Mesg_TimeStamp'] < end_time)
+                    ]
+                y = np.array(new_DataFrame[self.property])
+                x = np.array(new_DataFrame['Mesg_TimeStamp'])
+                line.set_data([x, y])
+                self.acx.set_xlim(x[0], x[-1])
+                self.acx.set_ylim(-min(y) * 0.5, max(y) * 1.5)
+                plt.draw()
+                plt.pause(0.001)
 
 def test():
     ins_data = r'/home/nailinliao/Desktop/radar1/1670812712096032405_EBC2_EBS.csv'
@@ -139,12 +226,13 @@ def test():
     time_secs, time_nans, time_floats = get_video_time(video_path)
     DataFrame = pd.read_csv(ins_data)
     property = 'Front_Axle_Speed'
-
-    q_video = Queue()  # 创建队列
     q_message = Queue()  # 创建队列
 
-    oscilloscopeLoader_loader = OscilloscopeLoader(DataFrame, property, time_floats, q_video, q_message)
-    time.sleep(10)
+    oscilloscopeLoader_loader = OscilloscopeLoader(DataFrame, property, q_message)
+    for time_ in time_floats:
+        q_message.put(time_)
+    q_message.put('q')
+    # time.sleep(1)
 
 
 test()
