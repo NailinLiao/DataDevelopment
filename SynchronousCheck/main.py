@@ -314,9 +314,9 @@ def main():
     norm_H_3_1, norm_H_2_3 = get_norm_mtx()
 
     time_dropout_matching_check_fram(
-        r'/media/nas48/shucai/20230111_公开道路摄像头同步测试数据/20230111_153435_output/record/camera2',
-        r'/media/nas48/shucai/20230111_公开道路摄像头同步测试数据/20230111_153435_output/record/camera3',
-        r'/home/nailinliao/Desktop/20230111_norm_H_2_3', norm_H_2_3)
+        r'/home/nailinliao/Desktop/record/camera3',
+        r'/home/nailinliao/Desktop/record/camera1',
+        r'/home/nailinliao/Desktop/20230111_norm_H_3_1', norm_H_3_1)
 
     # time_dropout_matching_check_fram([r'/home/nailinliao/Desktop/DataDevelopment/SynchronousCheck/test_data/test_data/cm1',
     #                                   r'/home/nailinliao/Desktop/DataDevelopment/SynchronousCheck/test_data/test_data/cm2',
